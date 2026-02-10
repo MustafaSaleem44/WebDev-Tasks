@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amateur Archery Game</title>
+    <style>
+        body {
+            background-color: #00BFFF; 
+            font-family: "Comic Sans MS", "Arial", sans-serif; 
+            overflow: hidden; 
+            margin: 0;
+            user-select: none;
+        }
+
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 0px black;
+        }
+
+        #bow {
+            position: absolute;
+            left: 50px;
+            top: 50%;
+            width: 100px;
+            height: 100px;
+            transform-origin: center center;
+            z-index: 10;
+        }
+
+        #target {
+            position: absolute;
+            right: 50px;
+            top: 50%; 
+            font-size: 80px; 
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: default;
+        }
+
+        .arrow {
+            position: absolute;
+            height: 5px;  
+            background-color: red;
+            width: 60px;
+            transform-origin: left center;
+        }
+        
+        #game-over-msg {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: yellow;
+            border: 5px solid red;
+            padding: 20px;
+            text-align: center;
+            font-size: 30px;
+            z-index: 100;
+        }
+
+        button {
+            font-size: 20px;
+            padding: 10px 20px;
+            background: lime;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-container">
+        Score: <span id="score">0</span> <br>
+        Time: <span id="time">60</span>s
+    </div>
+
+    <img id="bow" src="bow.png" alt="Bow">
+    <div id="target">🎯</div>
+
+    <div id="game-over-msg">
+        GAME OVER!<br>
+        <button onclick="location.reload()">Play Again</button>
+    </div>
+
+    <script>
+        const gameState = {
+            score: 0,
+            timeLeft: 60, 
+            gameOver: false, 
+            arrowInFlight: false, 
+            bowAngle: 0,
+            bowDirection: 1, 
+            targetY: window.innerHeight / 2,
+            targetDirection: 1, 
+            targetSpeed: 3
+        };
+
+        const bowElem = document.getElementById('bow');
+        const targetElem = document.getElementById('target');
+        const scoreElem = document.getElementById('score');
+        const timeElem = document.getElementById('time');
+        const gameOverMsg = document.getElementById('game-over-msg');
+
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver) return;
+            
+            if (e.code === 'Space') { 
+                e.preventDefault(); 
+                shootArrow();
+            }
+        });
+
+        function startTimer() {
+            const timerInterval = setInterval(() => {
+                if (gameState.timeLeft > 0) {
+                    gameState.timeLeft--;
+                    timeElem.innerText = gameState.timeLeft;
+                } else {
+                    clearInterval(timerInterval);
+                    endGame(); 
+                }
+            }, 1000);
+        }
+
+        function animateBow() {
+            if (gameState.gameOver) return;
+
+            gameState.bowAngle += 0.5 * gameState.bowDirection;
+            
+            if (gameState.bowAngle > 30) gameState.bowDirection = -1;
+            if (gameState.bowAngle < -30) gameState.bowDirection = 1;
+
+            bowElem.style.transform = `rotate(${gameState.bowAngle}deg)`;
+            
+            requestAnimationFrame(animateBow);
+        }
+
+        function moveTarget() {
+            if (gameState.gameOver) return;
+
+            gameState.targetY += gameState.targetSpeed * gameState.targetDirection;
+
+            if (gameState.targetY > window.innerHeight - 100 || gameState.targetY < 0) {
+                gameState.targetDirection *= -1;
+            }
+
+            targetElem.style.top = gameState.targetY + 'px';
+
+            requestAnimationFrame(moveTarget);
+        }
+
+        function shootArrow() {
+            if (gameState.arrowInFlight) return;
+
+            gameState.arrowInFlight = true;
+
+            const arrow = document.createElement('div');
+            arrow.classList.add('arrow');
+            document.body.appendChild(arrow);
+
+            const bowRect = bowElem.getBoundingClientRect();
+            const startX = bowRect.left + 50;
+            const startY = bowRect.top + 50;
+            
+            arrow.style.left = startX + 'px';
+            arrow.style.top = startY + 'px';
+            
+            const angleInRadians = gameState.bowAngle * (Math.PI / 180);
+            arrow.style.transform = `rotate(${gameState.bowAngle}deg)`;
+
+            let arrowX = startX;
+            let arrowY = startY;
+            const speed = 15;
+
+            function moveArrow() {
+                if (gameState.gameOver) {
+                    arrow.remove();
+                    gameState.arrowInFlight = false; 
+                    return;
+                }
+
+                arrowX += Math.cos(angleInRadians) * speed;
+                arrowY += Math.sin(angleInRadians) * speed;
+
+                arrow.style.left = arrowX + 'px';
+                arrow.style.top = arrowY + 'px';
+
+                if (checkCollision(arrow, targetElem)) {
+                    updateScore(); 
+                    arrow.remove();
+                    gameState.arrowInFlight = false; 
+                    
+                    targetElem.style.backgroundColor = "yellow";
+                    setTimeout(() => targetElem.style.backgroundColor = "transparent", 100);
+                    return; 
+                }
+
+                if (arrowX > window.innerWidth || arrowY > window.innerHeight || arrowY < 0) {
+                    arrow.remove();
+                    gameState.arrowInFlight = false; 
+                } else {
+                    requestAnimationFrame(moveArrow);
+                }
+            }
+            requestAnimationFrame(moveArrow);
+        }
+
+        function checkCollision(el1, el2) {
+            const rect1 = el1.getBoundingClientRect();
+            const rect2 = el2.getBoundingClientRect();
+
+            return !(rect1.right < rect2.left || 
+                     rect1.left > rect2.right || 
+                     rect1.bottom < rect2.top || 
+                     rect1.top > rect2.bottom);
+        }
+
+        function updateScore() {
+            gameState.score++;
+            scoreElem.innerText = gameState.score;
+            increaseDifficulty(); 
+        }
+
+        function increaseDifficulty() {
+            if (gameState.score % 2 === 0) {
+                gameState.targetSpeed += 1;
+                let currentSize = parseInt(window.getComputedStyle(targetElem).fontSize);
+                if (currentSize > 30) {
+                    targetElem.style.fontSize = (currentSize - 2) + "px";
+                }
+            }
+        }
+
+        function endGame() {
+            gameState.gameOver = true;
+            gameOverMsg.style.display = "block";
+        }
+
+        function init() {
+            startTimer();
+            moveTarget();
+            animateBow();
+        }
+
+        init();
+
+    </script>
+</body>
+</html>                                             

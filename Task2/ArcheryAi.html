@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smooth Archery</title>
+    <style>
+        body {
+            margin: 0;
+            background: #222;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: sans-serif;
+            color: white;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 900px;
+            height: 600px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #a2d9ff 60%, #4a8c38 60%, #2d5a27 100%);
+            border: 6px solid #555;
+            border-radius: 12px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6);
+            overflow: hidden;
+        }
+
+        /* UI Overlay */
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .stat-card {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        button {
+            pointer-events: auto;
+            background: #ff6b6b;
+            border: none;
+            padding: 10px 25px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #c0392b;
+            transition: transform 0.1s;
+        }
+
+        button:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        #end-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="ui">
+        <div class="stat-card">Score: <span id="score">0</span></div>
+        <button onclick="resetGame()">RESTART</button>
+        <div class="stat-card">Arrows: <span id="arrows">10</span></div>
+    </div>
+
+    <div id="end-screen">
+        <h1 style="font-size: 50px; color: #f1c40f; margin-bottom: 10px;">GAME OVER</h1>
+        <p style="font-size: 24px; color: #ccc;">Total Score: <span id="final-score">0</span></p>
+        <button onclick="resetGame()" style="font-size: 24px; padding: 15px 40px;">Play Again</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const width = 900;
+    const height = 600;
+    
+    // Set explicit canvas resolution
+    canvas.width = width;
+    canvas.height = height;
+
+    // --- Configuration ---
+    const BOW_X = 180;         // Moved further right for better handling
+    const BOW_Y = 350;         // Vertical center of shooting
+    const GRAVITY = 0.4;       // Gravity strength
+    const MAX_POWER = 22;      // Max arrow speed
+    const DRAG_SCALE = 0.08;   // Mouse drag to power ratio
+
+    // --- Game State ---
+    let state = {
+        score: 0,
+        arrowsLeft: 10,
+        isDragging: false,
+        dragStart: { x: 0, y: 0 },
+        dragCurrent: { x: 0, y: 0 },
+        arrows: [],
+        target: { 
+            x: 800, 
+            y: 300, 
+            radius: 45, 
+            speed: 3, 
+            dir: 1 
+        },
+        gameOver: false
+    };
+
+    // --- Input Handling ---
+    canvas.addEventListener('mousedown', e => {
+        if (state.gameOver || state.arrowsLeft <= 0) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        state.isDragging = true;
+        // Record where the user clicked (Origin of the pull)
+        state.dragStart = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+        state.dragCurrent = { ...state.dragStart };
+    });
+
+    window.addEventListener('mousemove', e => {
+        if (!state.isDragging) return;
+        const rect = canvas.getBoundingClientRect();
+        state.dragCurrent = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (!state.isDragging) return;
+        state.isDragging = false;
+        
+        // Calculate Launch Vector
+        // Logic: The "Pull" is Start - Current. 
+        // We shoot in the direction of the Pull.
+        const dx = state.dragStart.x - state.dragCurrent.x;
+        const dy = state.dragStart.y - state.dragCurrent.y;
+        
+        // Calculate power (magnitude)
+        const pullDist = Math.sqrt(dx*dx + dy*dy);
+        const power = Math.min(pullDist * DRAG_SCALE, MAX_POWER);
+        const angle = Math.atan2(dy, dx);
+
+        // Only fire if pulled back enough
+        if (power > 3) {
+            fireArrow(angle, power);
+        }
+    });
+
+    function fireArrow(angle, power) {
+        state.arrowsLeft--;
+        updateUI();
+
+        state.arrows.push({
+            x: BOW_X,
+            y: BOW_Y,
+            vx: Math.cos(angle) * power,
+            vy: Math.sin(angle) * power,
+            angle: angle,
+            stuck: false
+        });
+
+        if (state.arrowsLeft === 0) {
+            // Check for game over after last arrow lands
+            setTimeout(checkEndGame, 1000);
+        }
+    }
+
+    function checkEndGame() {
+        // Wait until all arrows stop moving
+        const interval = setInterval(() => {
+            const allStopped = state.arrows.every(a => a.stuck || a.x > width || a.y > height);
+            if (allStopped) {
+                clearInterval(interval);
+                state.gameOver = true;
+                document.getElementById('final-score').innerText = state.score;
+                document.getElementById('end-screen').style.display = 'flex';
+            }
+        }, 500);
+    }
+
+    function resetGame() {
+        state.score = 0;
+        state.arrowsLeft = 10;
+        state.arrows = [];
+        state.gameOver = false;
+        state.target.speed = 3;
+        document.getElementById('end-screen').style.display = 'none';
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('score').innerText = state.score;
+        document.getElementById('arrows').innerText = state.arrowsLeft;
+    }
+
+    // --- Physics Engine ---
+    function update() {
+        if (state.gameOver) return;
+
+        // Target Movement (Bouncing)
+        state.target.y += state.target.speed * state.target.dir;
+        if (state.target.y > height - 100 || state.target.y < 50) {
+            state.target.dir *= -1;
+        }
+
+        // Arrow Physics
+        state.arrows.forEach(a => {
+            if (!a.stuck) {
+                // Apply Gravity
+                a.vy += GRAVITY;
+                
+                // Update Position
+                a.x += a.vx;
+                a.y += a.vy;
+                
+                // Update Rotation (Angle matches velocity)
+                a.angle = Math.atan2(a.vy, a.vx);
+
+                // Collision Check (Circle vs Point)
+                const dx = a.x - state.target.x;
+                const dy = a.y - state.target.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+
+                if (dist < state.target.radius) {
+                    a.stuck = true;
+                    // Stick offset
+                    a.offsetX = a.x - state.target.x;
+                    a.offsetY = a.y - state.target.y;
+
+                    // Scoring
+                    let points = 0;
+                    if (dist < 10) points = 50;
+                    else if (dist < 25) points = 25;
+                    else points = 10;
+                    
+                    state.score += points;
+                    
+                    // Increase Difficulty slightly on hit
+                    state.target.speed += 0.2;
+                    
+                    updateUI();
+                }
+            } else if (a.stuck && a.offsetX !== undefined) {
+                // Move arrow with target
+                a.x = state.target.x + a.offsetX;
+                a.y = state.target.y + a.offsetY;
+            }
+        });
+    }
+
+    // --- Rendering ---
+    function draw() {
+        ctx.clearRect(0, 0, width, height);
+
+        // 1. Draw Target
+        const rings = [
+            { r: 45, c: 'white' },
+            { r: 30, c: '#e74c3c' }, // Red
+            { r: 15, c: '#f1c40f' }  // Yellow
+        ];
+        
+        // Draw rope holding target
+        ctx.beginPath();
+        ctx.moveTo(state.target.x, 0);
+        ctx.lineTo(state.target.x, state.target.y);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        rings.forEach(ring => {
+            ctx.beginPath();
+            ctx.arc(state.target.x, state.target.y, ring.r, 0, Math.PI * 2);
+            ctx.fillStyle = ring.c;
+            ctx.fill();
+            ctx.strokeStyle = '#222';
+            ctx.stroke();
+        });
+
+
+        // 2. Draw Bow Logic
+        ctx.save();
+        ctx.translate(BOW_X, BOW_Y);
+
+        // Calculate Angle
+        let aimAngle = 0;
+        let stringPull = 0;
+
+        if (state.isDragging) {
+            // Angle based on drag vector
+            const dx = state.dragStart.x - state.dragCurrent.x;
+            const dy = state.dragStart.y - state.dragCurrent.y;
+            aimAngle = Math.atan2(dy, dx);
+            stringPull = Math.min(Math.sqrt(dx*dx + dy*dy) * 0.1, 35); // Visual limit for string
+        } else {
+            // Idle angle (points vaguely at mouse or straight)
+            aimAngle = 0; 
+        }
+
+        ctx.rotate(aimAngle);
+
+        // Draw Bow Body (Wood)
+        ctx.beginPath();
+        ctx.arc(0, 0, 40, Math.PI/2, -Math.PI/2, false); 
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        // Draw String
+        ctx.beginPath();
+        ctx.moveTo(0, -40);
+        ctx.lineTo(-stringPull, 0); // Pulled back point
+        ctx.lineTo(0, 40);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#fff';
+        ctx.stroke();
+        
+        // Draw Arrow on Bow (if dragging)
+        if (state.isDragging) {
+            ctx.beginPath();
+            ctx.moveTo(-stringPull, 0);
+            ctx.lineTo(40, 0); // Arrow sticking out
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Arrow Head
+            ctx.beginPath();
+            ctx.fillStyle = '#555';
+            ctx.moveTo(40, 0);
+            ctx.lineTo(35, -4);
+            ctx.lineTo(35, 4);
+            ctx.fill();
+        }
+
+        ctx.restore();
+
+        // 3. Draw Trajectory Line (Helper)
+        if (state.isDragging) {
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([10, 10]);
+            
+            // Draw a straight line from bow in direction of aim
+            const dx = state.dragStart.x - state.dragCurrent.x;
+            const dy = state.dragStart.y - state.dragCurrent.y;
+            const angle = Math.atan2(dy, dx);
+            
+            ctx.moveTo(BOW_X, BOW_Y);
+            ctx.lineTo(BOW_X + Math.cos(angle) * 150, BOW_Y + Math.sin(angle) * 150);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // 4. Draw Flying Arrows
+        state.arrows.forEach(a => {
+            ctx.save();
+            ctx.translate(a.x, a.y);
+            ctx.rotate(a.angle);
+            
+            ctx.beginPath();
+            ctx.moveTo(-20, 0);
+            ctx.lineTo(20, 0);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#222';
+            ctx.stroke();
+
+            // Fletching
+            ctx.fillStyle = 'red';
+            ctx.fillRect(-20, -3, 8, 6);
+            ctx.restore();
+        });
+        
+        requestAnimationFrame(() => {
+            update();
+            draw();
+        });
+    }
+
+    draw();
+
+</script>
+</body>
+</html>
