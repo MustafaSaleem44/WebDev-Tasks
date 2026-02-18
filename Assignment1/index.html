@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Editor - Assignment 1</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="container disable-select">
+        <h2>Photo Editor</h2>
+        <div class="wrapper">
+            <div class="editor-panel">
+                <div class="filter-section">
+                    <span class="title">Filters</span>
+                    <div class="options">
+                        <button id="brightness" class="active">Brightness</button>
+                        <button id="saturation">Saturation</button>
+                        <button id="inversion">Inversion</button>
+                        <button id="grayscale">Grayscale</button>
+                        <button id="sepia">Sepia</button>
+                        <button id="blur">Blur</button>
+                        <button id="rotateSlider">Rotate</button>
+                    </div>
+                    <div class="slider">
+                        <div class="filter-info">
+                            <span class="name">Brightness</span>
+                            <span class="value">100%</span>
+                        </div>
+                        <input type="range" value="100" min="0" max="200">
+                    </div>
+                </div>
+                <div class="rotate">
+                    <span class="title">Rotate & Flip</span>
+                    <div class="options">
+                        <button id="left">Left</button>
+                        <button id="right">Right</button>
+                        <button id="horizontal">Flip H</button>
+                        <button id="vertical">Flip V</button>
+                    </div>
+                </div>
+            </div>
+            <div class="preview-img">
+                <img id="image-preview" src="" alt="preview-img" style="display: none;">
+                <canvas id="image-canvas"></canvas>
+                <div class="placeholder-text" id="placeholder-text">Choose Image to Edit</div>
+            </div>
+        </div>
+        <div class="controls">
+            <button class="reset-filter">Reset Filters</button>
+            <div class="row">
+                <input type="file" class="file-input" accept="image/*" hidden>
+                <button class="choose-img">Choose Image</button>
+                <button class="save-img">Save Image</button>
+            </div>
+        </div>
+
+        <div class="history-controls" style="margin-top: 20px; text-align: center;">
+            <button id="btn-undo" class="history-btn" disabled>Undo</button>
+            <button id="btn-redo" class="history-btn" disabled>Redo</button>
+            <button id="toggle-history" class="history-btn">Show History</button>
+        </div>
+
+        <div class="history-panel hidden" id="history-panel">
+            <h3>Edit History</h3>
+            <ul id="history-list"></ul>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
