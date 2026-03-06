@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const User = require('../User'); 
 
-// POST /login
 router.post('/', async (req, res) => {
     const { username, password } = req.body;
     const user = new User(username, password);
@@ -10,7 +9,7 @@ router.post('/', async (req, res) => {
 
     if (result.success) {
         req.session.user = username; // Create session 
-        res.send('Login successful'); // Expected output 
+        res.send('Login successful');
     } else {
         res.status(401).send(result.message);
     }

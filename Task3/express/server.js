@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
 
-// Import the route files
+//route files
 const registerRoute = require('./routes/register');
 const loginRoute = require('./routes/login');
 const dashboardRoute = require('./routes/dashboard');
@@ -31,18 +31,16 @@ mongoose.connect(dbURI)
         console.error('Error connecting to MongoDB:', error);
     });
 
-// Use the routes
+
 app.use('/register', registerRoute);
 app.use('/login', loginRoute);
 app.use('/dashboard', dashboardRoute);
 app.use('/logout', logoutRoute);
 
-// Basic test route
 app.get('/', (req, res) => {
     res.send('Server is running and ready!');
 });
-
-// Start the server
+// Start  server
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });

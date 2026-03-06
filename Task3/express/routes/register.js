@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../User'); // Import User class from the parent directory
+const User = require('../User'); 
 
-// POST /register
 router.post('/', async (req, res) => {
     const { username, password } = req.body;
     const user = new User(username, password);
