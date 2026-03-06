@@ -13,12 +13,12 @@ const UserModel = mongoose.model('User', userSchema);
 // 3. Create the User Class as required by your assignment
 class User {
     constructor(username, password) {
-        this.username = username; [cite: 4]
-        this.password = password; [cite: 5]
+        this.username = username;
+        this.password = password;
     }
 
     // Method to save the user to MongoDB
-    async register() { [cite: 5]
+    async register() {
         try {
             // Create a new database entry using the Mongoose model
             const newUser = new UserModel({
@@ -35,7 +35,7 @@ class User {
     }
 
     // Method to check if the user exists in MongoDB
-    async login() { [cite: 5]
+    async login() {
         try {
             // Search the database for a matching username and password
             const foundUser = await UserModel.findOne({
