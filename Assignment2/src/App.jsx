@@ -13,10 +13,10 @@ function App() {
   
   const [battingStyle, setBattingStyle] = useState("Defensive");
   
-  // idle, bowling, shot-played
+  // idle (slider moving), bowling (animation), shot-played (animation)
   const [gameState, setGameState] = useState("idle");
   const [latestOutcome, setLatestOutcome] = useState(null);
-  const [commentaryText, setCommentaryText] = useState("Welcome to the 2D Cricket Game! Select style and click Bowl.");
+  const [commentaryText, setCommentaryText] = useState("Welcome! Select style and press SPACE or click the button to play.");
 
   const isGameOver = balls >= 12 || wickets >= 2;
 
@@ -27,36 +27,34 @@ function App() {
     setGameState("idle");
     setLatestOutcome(null);
     setBattingStyle("Defensive");
-    setCommentaryText("Match restarted! Select style and click Bowl.");
+    setCommentaryText("Match restarted! Press Spacebar or click Play to shoot.");
   };
 
-  const startBowling = () => {
-    if (isGameOver || gameState !== "idle") return;
+  const handleShotSelected = (outcome) => {
+    if (gameState !== "idle" || isGameOver) return;
     
-    setLatestOutcome(null);
-    setGameState("bowling");
-    setCommentaryText("Bowler running in... wait for it... click Play Shot when ready!");
-  };
-
-  const handleShotPlayed = (outcome) => {
-    if (gameState !== "bowling") return;
-    
-    setGameState("shot-played");
     setLatestOutcome(outcome);
-    setBalls((prev) => prev + 1);
+    setGameState("bowling");
+    setCommentaryText("Bowler runs in...");
 
-    if (outcome === "W") {
-      setWickets((prev) => prev + 1);
-    } else {
-      setRuns((prev) => prev + Number(outcome));
-    }
-
-    setCommentaryText(getRandomCommentary(outcome));
-
-    // Reset back to idle state after animation completes
+    // Wait for bowling animation to finish (e.g., 1000ms), then play shot
     setTimeout(() => {
-      setGameState("idle");
-    }, 1800); 
+      setGameState("shot-played");
+      
+      // Update score at the moment the bat hits the ball
+      setBalls((prev) => prev + 1);
+      if (outcome === "W") {
+        setWickets((prev) => prev + 1);
+      } else {
+        setRuns((prev) => prev + Number(outcome));
+      }
+      setCommentaryText(getRandomCommentary(outcome));
+
+      // Wait for shot animation to finish, then go back to idle
+      setTimeout(() => {
+        setGameState("idle");
+      }, 1500); 
+    }, 1200); // 1.2s for bowling animation
   };
 
   return (
@@ -80,7 +78,7 @@ function App() {
                   onChange={() => setBattingStyle("Defensive")}
                   disabled={gameState !== "idle" || isGameOver}
                 />
-                Defensive (Low Risk, Safe)
+                Defensive (Low Risk)
               </label>
               <label>
                 <input
@@ -91,17 +89,9 @@ function App() {
                   onChange={() => setBattingStyle("Aggressive")}
                   disabled={gameState !== "idle" || isGameOver}
                 />
-                Aggressive (High Risk, Boundaries)
+                Aggressive (High Risk)
               </label>
             </div>
-            
-            <button 
-              className="bowl-btn"
-              onClick={startBowling}
-              disabled={gameState !== "idle" || isGameOver}
-            >
-              Bowl Custom Delivery!
-            </button>
             
             <button className="restart-btn" onClick={handleRestart}>
               Restart Game
@@ -115,9 +105,9 @@ function App() {
           <Pitch gameState={gameState} latestOutcome={latestOutcome} />
           <PowerBar 
             styleName={battingStyle} 
-            isBowling={gameState === "bowling"} 
+            isIdle={gameState === "idle"} 
             isGameOver={isGameOver}
-            onShotPlayed={handleShotPlayed} 
+            onShotSelected={handleShotSelected} 
           />
         </div>
       </main>

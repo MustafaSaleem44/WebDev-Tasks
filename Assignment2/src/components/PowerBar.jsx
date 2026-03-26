@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BATTING_STYLES, getOutcomeFromPercentage } from "../utils/gameLogic";
 
-const PowerBar = ({ styleName, isGameOver, isBowling, onShotPlayed }) => {
+const PowerBar = ({ styleName, isGameOver, isIdle, onShotSelected }) => {
   const [sliderPos, setSliderPos] = useState(0); 
   const [direction, setDirection] = useState(1); 
   const animationRef = useRef(null);
@@ -16,7 +16,7 @@ const PowerBar = ({ styleName, isGameOver, isBowling, onShotPlayed }) => {
   }, [direction, sliderPos]);
 
   useEffect(() => {
-    if (isBowling && !isGameOver) {
+    if (isIdle && !isGameOver) {
       const updateSlider = () => {
         let currentPos = posRef.current;
         let currentDir = directionRef.current;
@@ -39,16 +39,27 @@ const PowerBar = ({ styleName, isGameOver, isBowling, onShotPlayed }) => {
       animationRef.current = requestAnimationFrame(updateSlider);
       return () => cancelAnimationFrame(animationRef.current);
     }
-  }, [isBowling, isGameOver]);
+  }, [isIdle, isGameOver]);
 
   const handlePlayShot = () => {
-    if (!isBowling || isGameOver) return;
+    if (!isIdle || isGameOver) return;
     cancelAnimationFrame(animationRef.current);
     
     // Stop the slider immediately and calculate result
-    const result = getOutcomeFromPercentage(sliderPos, styleName);
-    onShotPlayed(result);
+    const result = getOutcomeFromPercentage(posRef.current, styleName);
+    onShotSelected(result);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        handlePlayShot();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isIdle, isGameOver, styleName]);
 
   const segments = BATTING_STYLES[styleName] || BATTING_STYLES["Defensive"];
 
@@ -65,7 +76,6 @@ const PowerBar = ({ styleName, isGameOver, isBowling, onShotPlayed }) => {
               backgroundColor: seg.color,
             }}
           >
-            {/* Only show label if segment is wide enough */}
             {seg.prob > 0.04 && <span className="segment-label">{seg.label === "W" ? "W" : `${seg.label}`}</span>}
           </div>
         ))}
@@ -79,9 +89,9 @@ const PowerBar = ({ styleName, isGameOver, isBowling, onShotPlayed }) => {
       <button 
         className="play-shot-btn" 
         onClick={handlePlayShot}
-        disabled={!isBowling || isGameOver}
+        disabled={!isIdle || isGameOver}
       >
-        Play Shot!
+        Play Shot (SPACE)
       </button>
     </div>
   );

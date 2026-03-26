@@ -1,21 +1,21 @@
 export const BATTING_STYLES = {
   Defensive: [
-    { outcome: 0, prob: 0.35, color: "#9E9E9E", label: "0" },
     { outcome: 1, prob: 0.30, color: "#81C784", label: "1" },
-    { outcome: 2, prob: 0.15, color: "#4CAF50", label: "2" },
-    { outcome: 3, prob: 0.05, color: "#2E7D32", label: "3" },
     { outcome: 4, prob: 0.05, color: "#2196F3", label: "4" },
-    { outcome: 6, prob: 0.00, color: "#9C27B0", label: "6" },
+    { outcome: 0, prob: 0.35, color: "#9E9E9E", label: "0" },
+    { outcome: 2, prob: 0.15, color: "#4CAF50", label: "2" },
     { outcome: "W", prob: 0.10, color: "#F44336", label: "W" },
+    { outcome: 3, prob: 0.05, color: "#2E7D32", label: "3" },
+    { outcome: 6, prob: 0.00, color: "#9C27B0", label: "6" },
   ],
   Aggressive: [
-    { outcome: 0, prob: 0.10, color: "#9E9E9E", label: "0" },
+    { outcome: 6, prob: 0.20, color: "#9C27B0", label: "6" },
     { outcome: 1, prob: 0.10, color: "#81C784", label: "1" },
-    { outcome: 2, prob: 0.10, color: "#4CAF50", label: "2" },
+    { outcome: 0, prob: 0.05, color: "#9E9E9E", label: "0" },
+    { outcome: "W", prob: 0.40, color: "#F44336", label: "W" }, // Biggest Segment
+    { outcome: 4, prob: 0.15, color: "#2196F3", label: "4" },
+    { outcome: 2, prob: 0.05, color: "#4CAF50", label: "2" },
     { outcome: 3, prob: 0.05, color: "#2E7D32", label: "3" },
-    { outcome: 4, prob: 0.20, color: "#2196F3", label: "4" },
-    { outcome: 6, prob: 0.25, color: "#9C27B0", label: "6" },
-    { outcome: "W", prob: 0.20, color: "#F44336", label: "W" },
   ],
 };
 
